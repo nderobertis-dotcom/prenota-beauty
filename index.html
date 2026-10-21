@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prenotazioni</title>
+<style>
+  :root {
+    --blu: #4a1a22;
+    --accento: #a01d2e;
+    --sfondo: #f5f6f8;
+    --testo: #1a1a1a;
+    --bordo: #e2e4e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--sfondo);
+    color: var(--testo);
+  }
+  header {
+    background: #ffffff; border-bottom: 1px solid #ececec;
+    padding: 20px 20px 16px;
+    text-align: center;
+  }
+  header img.logo {
+    max-width: 100%;
+    width: 300px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  header p {
+    margin: 8px 0 0;
+    color: #6b6558;
+    font-size: 0.9rem;
+  }
+  main {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .step {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+    border: 1px solid var(--bordo);
+  }
+  .step h2 {
+    font-size: 1rem;
+    margin: 0 0 12px;
+    color: var(--blu);
+  }
+  .servizi-lista, .slot-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .opzione {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid var(--bordo);
+    border-radius: 8px;
+    cursor: pointer;
+    background: white;
+    font-size: 0.95rem;
+  }
+  .opzione:hover { border-color: var(--accento); }
+  .opzione.selezionata {
+    border-color: var(--accento);
+    background: #fbeef0;
+  }
+  .opzione .prezzo { color: #666; font-size: 0.85rem; }
+  .opzione input[type="checkbox"] { width: 18px; height: 18px; margin-right: 10px; accent-color: var(--accento); }
+  .opzione .testo-servizio { display: flex; align-items: center; }
+  .riepilogo-totale {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #fbeef0;
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 0.88rem;
+    color: var(--blu);
+    font-weight: 600;
+  }
+  input[type="date"], input[type="text"], input[type="tel"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--bordo);
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  .slot-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .slot-btn {
+    padding: 10px 4px;
+    border: 1px solid var(--bordo);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .slot-btn.selezionato { background: var(--accento); color: white; border-color: var(--accento); }
+  .slot-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  button.primario {
+    width: 100%;
+    padding: 14px;
+    background: var(--accento);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  button.primario:disabled { opacity: 0.4; cursor: not-allowed; }
+  .msg { text-align: center; padding: 12px; font-size: 0.9rem; color: #666; }
+  .msg.errore { color: #c0392b; }
+  footer {
+    text-align: center;
+    padding: 24px 20px 40px;
+  }
+  footer .contatti {
+    font-size: 0.85rem;
+    color: #777;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  footer a {
+    color: #aaa;
+    font-size: 0.78rem;
+    text-decoration: none;
+  }
+  footer a:hover { color: #888; text-decoration: underline; }
+  .conferma {
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .conferma .icona { font-size: 3rem; }
+  label { font-size: 0.85rem; color: #555; display: block; margin-bottom: 6px; }
+  .campo { margin-bottom: 12px; }
+  .operatori { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; }
+  .op-btn { padding:14px 8px; border:1px solid var(--bordo); border-radius:8px; background:white; cursor:pointer; font-size:0.95rem; font-weight:600; }
+  .op-btn:hover { border-color: var(--accento); }
+  .op-btn.selezionato { background: var(--accento); color:white; border-color: var(--accento); }
+  .privacy { font-size:0.75rem; color:#888; margin-top:10px; line-height:1.4; }
+  #brand-nome { margin:0; font-size:1.6rem; color:var(--blu); }
+</style>
+</head>
+<body>
+
+<header>
+  <img id="brand-logo" class="logo" alt="" style="display:none">
+  <h1 id="brand-nome"></h1>
+  <p>Prenota il tuo appuntamento</p>
+</header>
+
+<main id="app">
+
+  <div class="step" id="step-operatore">
+    <h2>1. Con chi vuoi prenotare?</h2>
+    <div class="operatori" id="lista-operatori"><div class="msg">Caricamento...</div></div>
+  </div>
+
+  <div class="step" id="step-servizio" style="display:none">
+    <h2>2. Trattamenti <span style="font-weight:400; color:#888; font-size:0.8rem;">(puoi sceglierne più di uno)</span></h2>
+    <div class="servizi-lista" id="lista-servizi"></div>
+    <div id="riepilogo-totale-box"></div>
+  </div>
+
+  <div class="step" id="step-data" style="display:none">
+    <h2>3. Data</h2>
+    <input type="date" id="input-data">
+  </div>
+
+  <div class="step" id="step-slot" style="display:none">
+    <h2>4. Orario disponibile</h2>
+    <div class="slot-grid" id="griglia-slot"></div>
+  </div>
+
+  <div class="step" id="step-dati" style="display:none">
+    <h2>5. I tuoi dati</h2>
+    <div class="campo">
+      <label>Nome e cognome</label>
+      <input type="text" id="input-nome" placeholder="Es. Maria Rossi">
+    </div>
+    <div class="campo">
+      <label>Telefono</label>
+      <input type="tel" id="input-telefono" placeholder="Es. 333 1234567">
+    </div>
+    <button class="primario" id="btn-conferma" disabled>Conferma prenotazione</button>
+    <div class="msg" id="msg-errore"></div>
+    <div class="privacy">Nome e telefono vengono usati solo per gestire l'appuntamento. Non indicare informazioni sulla tua salute.</div>
+  </div>
+
+  <div class="step conferma" id="step-ok" style="display:none">
+    <div class="icona">✅</div>
+    <h2>Prenotazione confermata!</h2>
+    <p id="riepilogo"></p>
+  </div>
+
+</main>
+
+<footer>
+  <div class="contatti" id="brand-contatti"></div>
+  <a href="admin.html">Area riservata</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============================================================
+// CONFIGURAZIONE — compila con i dati del centro e del nuovo progetto Supabase
+// ============================================================
+const CONFIG = {
+  nome: "Beauty — Bellezza & Benessere",
+  logo: "logo.png",
+  contatti: "<b>Beauty Bellezza &amp; Benessere</b><br>Centro estetico e podologia<br>" +
+            "Via Madonna dei Martiri 37 — 70056 Molfetta (BA)<br>" +
+            "Tel. <a href=\"tel:0803381245\" style=\"color:inherit\">080 3381245</a> · " +
+            "Cell. <a href=\"tel:3400502289\" style=\"color:inherit\">340 0502289</a><br>" +
+            "P.IVA 06843190726"
+};
+const SUPABASE_URL = "https://hvashsplqpvhskbmizte.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_34RGfQfrcFpf57sn1UZ5ig_oi_sMfHD";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let operatori = [];
+let servizi = [];     // tutti i servizi attivi
+let orari = [];       // tutti gli orari (per operatore)
+let festivita = [];
+let operatoreScelto = null;
+let serviziScelti = [];
+let slotScelto = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function brand() {
+  document.title = CONFIG.nome + " — Prenotazioni";
+  if (CONFIG.logo) { $("brand-logo").src = CONFIG.logo; $("brand-logo").alt = CONFIG.nome; $("brand-logo").style.display = "block"; $("brand-nome").style.display = "none"; }
+  else $("brand-nome").textContent = CONFIG.nome;
+  $("brand-contatti").innerHTML = CONFIG.contatti;
+}
+
+async function init() {
+  brand();
+  const [o, s, h, f] = await Promise.all([
+    sb.from("operatori").select("*").order("ordine"),
+    sb.from("servizi").select("*").order("ordine"),
+    sb.from("orari").select("*"),
+    sb.from("festivita_fisse").select("mese, giorno, nome")
+  ]);
+  if (o.error || s.error || h.error || f.error) {
+    $("lista-operatori").innerHTML = `<div class="msg errore">Errore nel caricamento. Riprova più tardi.</div>`;
+    return;
+  }
+  operatori = o.data.filter(op => s.data.some(sv => sv.operatore_id === op.id));
+  servizi = s.data; orari = h.data; festivita = f.data || [];
+  $("lista-operatori").innerHTML = operatori.map(op =>
+    `<button class="op-btn" data-id="${op.id}" onclick="scegliOperatore('${op.id}')">${esc(op.nome)}</button>`).join("")
+    || `<div class="msg">Nessun operatore disponibile.</div>`;
+  $("input-data").min = toISODate(new Date());
+  $("input-data").max = dataMassima();
+  $("input-data").value = toISODate(new Date());
+}
+
+// Prenotabile al massimo GIORNI_ANTICIPO giorni in avanti (stesso limite applicato dal database)
+const GIORNI_ANTICIPO = 60;
+function dataMassima() { const d = new Date(); d.setDate(d.getDate() + GIORNI_ANTICIPO); return toISODate(d); }
+
+window.scegliOperatore = function(id) {
+  operatoreScelto = operatori.find(o => o.id === id);
+  serviziScelti = []; slotScelto = null;
+  document.querySelectorAll(".op-btn").forEach(b => b.classList.toggle("selezionato", b.dataset.id === id));
+  $("step-dati").style.display = "none";
+  $("step-slot").style.display = "none";
+  $("step-servizio").style.display = "block";
+  $("step-data").style.display = "block";
+  renderServizi(); renderRiepilogoTotale();
+};
+
+function renderServizi() {
+  const lista = servizi.filter(sv => sv.operatore_id === operatoreScelto.id);
+  $("lista-servizi").innerHTML = lista.map(sv => `
+    <div class="opzione" data-id="${sv.id}" onclick="toggleServizio('${sv.id}')">
+      <span class="testo-servizio">
+        <input type="checkbox" id="chk-${sv.id}" onclick="event.stopPropagation(); toggleServizio('${sv.id}')">
+        ${esc(sv.nome)} · ${sv.durata_minuti} min
+      </span>
+      <span class="prezzo">${sv.prezzo ? "€ " + sv.prezzo : ""}</span>
+    </div>`).join("");
+}
+
+window.toggleServizio = function(id) {
+  const gia = serviziScelti.some(s => s.id === id);
+  serviziScelti = gia ? serviziScelti.filter(s => s.id !== id) : [...serviziScelti, servizi.find(s => s.id === id)];
+  document.querySelector(`.opzione[data-id="${id}"]`).classList.toggle("selezionata", !gia);
+  $(`chk-${id}`).checked = !gia;
+  renderRiepilogoTotale();
+  slotScelto = null;
+  $("step-dati").style.display = "none";
+  aggiornaSlot();
+};
+
+function renderRiepilogoTotale() {
+  if (serviziScelti.length === 0) { $("riepilogo-totale-box").innerHTML = ""; return; }
+  const durata = serviziScelti.reduce((t, s) => t + s.durata_minuti, 0);
+  const prezzo = serviziScelti.reduce((t, s) => t + Number(s.prezzo || 0), 0);
+  $("riepilogo-totale-box").innerHTML = `
+    <div class="riepilogo-totale">
+      <span>${serviziScelti.length} ${serviziScelti.length > 1 ? "trattamenti" : "trattamento"} · ${durata} min</span>
+      <span>€ ${prezzo.toFixed(2).replace(/\.00$/, "")}</span>
+    </div>`;
+}
+
+$("input-data").addEventListener("change", () => { slotScelto = null; $("step-dati").style.display = "none"; aggiornaSlot(); });
+
+async function aggiornaSlot() {
+  if (!operatoreScelto || serviziScelti.length === 0) { $("step-slot").style.display = "none"; return; }
+  const dataScelta = $("input-data").value;
+  if (!dataScelta) return;
+
+  $("step-slot").style.display = "block";
+  $("griglia-slot").innerHTML = `<div class="msg">Calcolo disponibilità...</div>`;
+
+  // alcuni browser da telefono ignorano min/max se la data viene digitata
+  if (dataScelta < toISODate(new Date())) { $("griglia-slot").innerHTML = `<div class="msg">Questa data è già passata. Scegline un'altra.</div>`; return; }
+  if (dataScelta > dataMassima()) { $("griglia-slot").innerHTML = `<div class="msg">Puoi prenotare al massimo ${GIORNI_ANTICIPO} giorni in anticipo.</div>`; return; }
+
+  const dataObj = new Date(dataScelta + "T12:00:00");
+  const festivo = trovaFestivita(dataObj);
+  if (festivo) { $("griglia-slot").innerHTML = `<div class="msg">Chiuso per ${esc(festivo.nome)}. Scegli un'altra data.</div>`; return; }
+
+  const orarioGiorno = orari.find(o => o.operatore_id === operatoreScelto.id && o.giorno_settimana === dataObj.getDay());
+  if (!orarioGiorno || orarioGiorno.chiuso) {
+    $("griglia-slot").innerHTML = `<div class="msg">${esc(operatoreScelto.nome)} non lavora in questo giorno. Scegli un'altra data.</div>`;
+    return;
+  }
+
+  const opRichiesta = operatoreScelto.id;
+  const { data: occupati, error } = await sb.rpc("get_occupazione", { p_data: dataScelta, p_operatore: opRichiesta });
+  // la risposta potrebbe arrivare dopo un cambio operatore/data: scarta se obsoleta
+  if (opRichiesta !== operatoreScelto.id || dataScelta !== $("input-data").value) return;
+  if (error) { $("griglia-slot").innerHTML = `<div class="msg errore">Errore nel calcolo degli orari.</div>`; return; }
+
+  const durata = serviziScelti.reduce((t, s) => t + s.durata_minuti, 0);
+  const slots = generaSlotLiberi(dataScelta, orarioGiorno, durata, occupati);
+  if (slots.length === 0) { $("griglia-slot").innerHTML = `<div class="msg">Nessun orario disponibile in questo giorno.</div>`; return; }
+
+  $("griglia-slot").innerHTML = slots.map(s => `
+    <button class="slot-btn" onclick="selezionaSlot('${s.inizio.toISOString()}', this)">${formattaOra(s.inizio)}</button>`).join("");
+}
+
+function trovaFestivita(d) {
+  return festivita.find(f => f.mese === d.getMonth() + 1 && f.giorno === d.getDate()) || null;
+}
+
+function aOra(dataStr, hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(dataStr + "T00:00:00"); d.setHours(h, m, 0, 0); return d;
+}
+
+function generaSlotLiberi(dataStr, og, durataMinuti, occupati) {
+  const out = [];
+  let cursore = aOra(dataStr, og.apertura);
+  const chiusura = aOra(dataStr, og.chiusura);
+  const pi = og.pausa_inizio && og.pausa_fine ? aOra(dataStr, og.pausa_inizio) : null;
+  const pf = pi ? aOra(dataStr, og.pausa_fine) : null;
+  const occ = (occupati || []).map(o => ({ inizio: new Date(o.inizio), fine: new Date(o.fine) }));
+  const ora = new Date();
+  while (cursore.getTime() + durataMinuti * 60000 <= chiusura.getTime()) {
+    const fine = new Date(cursore.getTime() + durataMinuti * 60000);
+    const inPausa = pi && cursore < pf && fine > pi;
+    if (!inPausa && cursore >= ora && !occ.some(o => cursore < o.fine && fine > o.inizio)) out.push({ inizio: new Date(cursore), fine });
+    cursore = new Date(cursore.getTime() + 15 * 60000);
+  }
+  return out;
+}
+
+window.selezionaSlot = function(inizioISO, el) {
+  slotScelto = { inizio: new Date(inizioISO) };
+  document.querySelectorAll(".slot-btn").forEach(b => b.classList.remove("selezionato"));
+  el.classList.add("selezionato");
+  $("step-dati").style.display = "block";
+  validaForm();
+};
+
+$("input-nome").addEventListener("input", validaForm);
+$("input-telefono").addEventListener("input", validaForm);
+function validaForm() {
+  $("btn-conferma").disabled = !(slotScelto && serviziScelti.length > 0 && $("input-nome").value.trim().length > 1 && $("input-telefono").value.trim().length >= 6);
+}
+
+$("btn-conferma").addEventListener("click", async () => {
+  $("btn-conferma").disabled = true;
+  $("msg-errore").textContent = "";
+  // Un'unica chiamata atomica: validazione e inserimento di tutti i trattamenti lato database.
+  const { error } = await sb.rpc("crea_prenotazione", {
+    p_nome_cliente: $("input-nome").value.trim(),
+    p_telefono: $("input-telefono").value.trim(),
+    p_servizio_ids: serviziScelti.map(s => s.id),
+    p_inizio: slotScelto.inizio.toISOString()
+  });
+  if (error) {
+    const m = (error.message || "").toLowerCase();
+    if (error.code === "P0001" && m.includes("limite prenotazioni settimanali")) {
+      // non è un problema di orario: lascia la scelta com'è
+      $("msg-errore").textContent = "Con questo numero hai già 2 appuntamenti in questa settimana. Per esigenze particolari chiama il centro.";
+      $("btn-conferma").disabled = false;
+      return;
+    }
+    $("msg-errore").textContent = error.code === "23P01"
+      ? "Questo orario è appena stato occupato. Scegli un altro orario."
+      : error.code === "P0001" && m.includes("data troppo lontana")
+        ? `Puoi prenotare al massimo ${GIORNI_ANTICIPO} giorni in anticipo.`
+      : error.code === "P0001" && m.includes("dati cliente")
+        ? "Controlla nome e numero di telefono."
+      : error.code === "P0001"
+        ? "Questo orario non è più prenotabile. Scegline un altro."
+        : "Errore durante la prenotazione. Riprova.";
+    $("btn-conferma").disabled = false;
+    aggiornaSlot();
+    return;
+  }
+  document.querySelectorAll(".step").forEach(el => el.style.display = "none");
+  $("step-ok").style.display = "block";
+  $("riepilogo").textContent = `${serviziScelti.map(s => s.nome).join(", ")} con ${operatoreScelto.nome}, ${formattaData(slotScelto.inizio)} alle ${formattaOra(slotScelto.inizio)}.`;
+});
+
+function toISODate(d) { const p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }
+function formattaOra(d) { return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }); }
+function formattaData(d) { return d.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" }); }
+
+init();
+</script>
+</body>
+</html>

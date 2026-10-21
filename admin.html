@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Area riservata — Agenda</title>
+<style>
+  :root { --blu:#4a1a22; --accento:#a01d2e; --sfondo:#f5f6f8; --bordo:#e2e4e8; --verde:#16a34a; --rosso:#dc2626; --evid:#fbeef0; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--sfondo); }
+  header { background:var(--blu); color:white; padding:14px 20px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  header h1 { font-size:1.1rem; margin:0; }
+  header button { background:transparent; border:1px solid rgba(255,255,255,.4); color:white; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:.85rem; }
+  .logo-admin { height:52px; width:auto; background:#fff; border-radius:8px; padding:4px 8px; flex:none; }
+  main { max-width:760px; margin:0 auto; padding:20px; }
+  #login-box { max-width:340px; margin:60px auto; background:white; padding:24px; border-radius:12px; border:1px solid var(--bordo); }
+  #login-box h2 { margin-top:0; font-size:1.1rem; }
+  #login-box input { width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--bordo); border-radius:8px; }
+  #login-box button { width:100%; padding:12px; background:var(--accento); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; }
+  #login-errore, .form-errore { color:var(--rosso); font-size:.85rem; margin-top:8px; width:100%; }
+  .card { background:white; border-radius:12px; border:1px solid var(--bordo); padding:16px; margin-bottom:14px; }
+  .sezione-titolo { font-size:.95rem; color:var(--blu); margin:0 0 10px; font-weight:700; }
+  .msg { text-align:center; color:#888; padding:16px; font-size:.9rem; }
+  input, select { padding:8px; border:1px solid var(--bordo); border-radius:6px; font-size:.95rem; }
+  button { font-family:inherit; }
+  .riga-form { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .riga-form input[type=text], .riga-form input[type=tel] { flex:1; min-width:130px; }
+  .btn { padding:8px 14px; border:none; border-radius:6px; cursor:pointer; color:white; background:var(--accento); }
+  .btn.verde { background:var(--verde); } .btn.neutro { background:transparent; color:#666; border:1px solid var(--bordo); }
+  .barra { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .barra > button { padding:8px 12px; border:1px solid var(--bordo); background:white; border-radius:6px; cursor:pointer; }
+  .barra input[type=date] { flex:1; min-width:140px; padding:10px; }
+  .toggle { display:flex; border:1px solid var(--bordo); border-radius:6px; overflow:hidden; }
+  .toggle button { border:none; padding:8px 14px; background:white; cursor:pointer; font-size:.85rem; }
+  .toggle button.attivo { background:var(--accento); color:white; }
+  .chip-op { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .chip-op button { padding:6px 12px; border:1px solid var(--bordo); background:white; border-radius:16px; cursor:pointer; font-size:.85rem; }
+  .chip-op button.attivo { background:var(--accento); color:white; border-color:var(--accento); }
+  .p-riga { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--bordo); }
+  .p-riga:last-child { border-bottom:none; }
+  .p-ora { font-weight:700; color:var(--blu); width:56px; }
+  .p-det { flex:1; padding:0 10px; } .p-det .nome { font-weight:600; } .p-det .info { font-size:.82rem; color:#666; }
+  .tag-op { display:inline-block; font-size:.7rem; background:var(--evid); color:var(--blu); border-radius:10px; padding:1px 8px; margin-left:6px; }
+  .annullata { opacity:.5; text-decoration:line-through; }
+  .p-riga button, .mini button { border:none; background:transparent; cursor:pointer; font-size:1.05rem; padding:4px 6px; }
+  .giorno-col { border:1px solid var(--bordo); border-radius:8px; padding:10px 12px; margin-bottom:12px; }
+  .giorno-titolo { font-weight:700; color:var(--blu); font-size:.88rem; margin-bottom:6px; text-transform:capitalize; }
+  .giorno-titolo.oggi { color:var(--accento); }
+  .mini { display:flex; padding:6px 0; border-bottom:1px solid var(--bordo); font-size:.85rem; align-items:center; }
+  .mini:last-child { border-bottom:none; } .mini .o { font-weight:600; width:48px; } .mini .n { flex:1; padding:0 8px; }
+  #card-manuale.in-modifica { border:2px solid var(--accento); background:var(--evid); }
+  .serv-riga { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--bordo); flex-wrap:wrap; }
+  .serv-riga.disattivo { opacity:.5; }
+  .serv-riga input[type=text] { flex:2; min-width:110px; } .serv-riga input[type=number] { width:70px; }
+  .serv-riga .az { margin-left:auto; display:flex; gap:4px; } .serv-riga button { border:1px solid var(--bordo); background:white; border-radius:6px; padding:6px 9px; cursor:pointer; }
+  .gruppo-titolo { font-weight:700; font-size:.85rem; color:var(--accento); margin:12px 0 2px; }
+  .orari-tab { width:100%; border-collapse:collapse; font-size:.85rem; }
+  .orari-tab td, .orari-tab th { padding:5px 3px; text-align:left; } .orari-tab input[type=time] { width:98px; padding:5px; }
+  .stats-riep { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .stats-box { background:var(--sfondo); border-radius:8px; padding:12px 8px; text-align:center; }
+  .stats-box .v { font-size:1.4rem; font-weight:700; color:var(--blu); } .stats-box .e { font-size:.72rem; color:#777; }
+  .st-riga { display:flex; padding:7px 0; border-bottom:1px solid var(--bordo); font-size:.88rem; }
+  .st-riga .a { flex:1; } .st-riga .b { width:60px; text-align:center; font-weight:600; } .st-riga .c { width:80px; text-align:right; color:var(--verde); font-weight:600; }
+  .blocco-riga { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid var(--bordo); font-size:.85rem; }
+  .blocco-riga .i { flex:1; } .blocco-riga button { border:none; background:transparent; cursor:pointer; color:var(--rosso); font-size:1rem; }
+</style>
+</head>
+<body>
+
+<div id="login-box">
+  <img src="logo.png" alt="" style="display:block;max-width:200px;margin:0 auto 14px" onerror="this.style.display='none'">
+  <h2>Accesso area riservata</h2>
+  <input type="email" id="login-email" placeholder="Email">
+  <input type="password" id="login-password" placeholder="Password">
+  <button id="btn-login">Accedi</button>
+  <div id="login-errore"></div>
+</div>
+
+<div id="dashboard" style="display:none">
+  <header><div style="display:flex;gap:12px;align-items:center"><img src="logo.png" alt="" class="logo-admin" onerror="this.style.display='none'"><div><h1 id="titolo-admin">Agenda</h1><div id="dati-centro" style="font-size:.74rem;opacity:.85;margin-top:3px;line-height:1.4"></div></div></div><button id="btn-logout">Esci</button></header>
+  <main>
+    <div class="barra">
+      <button id="btn-prec">◀</button>
+      <input type="date" id="data-agenda">
+      <button id="btn-succ">▶</button>
+      <div class="toggle"><button id="v-giorno" class="attivo">Giorno</button><button id="v-sett">Settimana</button></div>
+    </div>
+    <div class="chip-op" id="chip-op"></div>
+
+    <div class="card">
+      <p class="sezione-titolo" id="titolo-lista">Prenotazioni del giorno</p>
+      <div id="lista-prenotazioni"><div class="msg">Caricamento...</div></div>
+    </div>
+
+    <div class="card" id="card-manuale">
+      <p class="sezione-titolo" id="mp-titolo">Nuova prenotazione manuale</p>
+      <div class="riga-form">
+        <select id="mp-operatore"></select>
+        <select id="mp-servizio"></select>
+      </div>
+      <div class="riga-form">
+        <input type="date" id="mp-data"><input type="time" id="mp-ora" step="300">
+        <input type="text" id="mp-nome" placeholder="Nome cliente"><input type="tel" id="mp-telefono" placeholder="Telefono">
+      </div>
+      <div class="riga-form" id="mp-ric-riga">
+        <input type="checkbox" id="mp-ric"><label for="mp-ric">Ricorrente, stesso giorno della settimana</label>
+        <label id="mp-fino-l" style="display:none">fino al</label><input type="date" id="mp-fino" style="display:none">
+      </div>
+      <div class="riga-form">
+        <button class="btn verde" id="btn-prenota">Prenota</button>
+        <button class="btn neutro" id="btn-annulla-mod" style="display:none">Annulla modifica</button>
+        <div class="form-errore" id="mp-errore"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sezione-titolo">Trattamenti e prezzi</p>
+      <div id="lista-servizi"><div class="msg">Caricamento...</div></div>
+      <div class="riga-form" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--bordo)">
+        <select id="ns-operatore"></select>
+        <input type="text" id="ns-nome" placeholder="Nome trattamento">
+        <input type="number" id="ns-durata" placeholder="Min" min="5" step="5" style="width:80px">
+        <input type="number" id="ns-prezzo" placeholder="€" min="0" step="0.5" style="width:80px">
+        <button class="btn" id="btn-add-servizio">Aggiungi</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sezione-titolo">Operatori e orari di lavoro</p>
+      <div class="riga-form">
+        <select id="or-operatore"></select>
+        <input type="text" id="or-nome" placeholder="Nome operatore" style="max-width:200px">
+        <button class="btn neutro" id="btn-rinomina-op">Rinomina</button>
+        <button class="btn neutro" id="btn-toggle-op"></button>
+      </div>
+      <table class="orari-tab"><thead><tr><th>Giorno</th><th>Chiuso</th><th>Apre</th><th>Chiude</th><th>Pausa da</th><th>a</th></tr></thead><tbody id="orari-body"></tbody></table>
+      <div class="riga-form" style="margin-top:10px"><button class="btn verde" id="btn-salva-orari">Salva orari</button><div class="form-errore" id="or-errore"></div></div>
+      <div class="riga-form" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--bordo)">
+        <input type="text" id="nuovo-op-nome" placeholder="Nuovo operatore"><button class="btn" id="btn-add-op">Aggiungi operatore</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="sezione-titolo">Statistiche</p>
+      <div class="toggle" style="width:fit-content;margin-bottom:12px">
+        <button id="st-7g">Ultimi 7 giorni</button><button id="st-mese">Ultimo mese</button><button id="st-tutto" class="attivo">Da sempre</button>
+      </div>
+      <div id="stats"><div class="msg">Caricamento...</div></div>
+    </div>
+
+    <div class="card">
+      <p class="sezione-titolo">Blocca un intervallo (ferie, imprevisti)</p>
+      <div class="riga-form"><label>Per</label><select id="bl-operatore"></select></div>
+      <div class="riga-form"><label>Dal</label><input type="date" id="bl-da"><label>al</label><input type="date" id="bl-a"></div>
+      <div class="riga-form">
+        <input type="checkbox" id="bl-tutto" checked><label for="bl-tutto">Tutto il giorno</label>
+        <label>dalle</label><input type="time" id="bl-ora-da" disabled><label>alle</label><input type="time" id="bl-ora-a" disabled>
+      </div>
+      <div class="riga-form"><input type="text" id="bl-motivo" placeholder="Motivo (facoltativo)"><button class="btn" id="btn-blocca">Blocca</button></div>
+      <div class="form-errore" id="bl-errore"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bordo)">
+        <p class="sezione-titolo" style="font-size:.85rem">Blocchi in programma</p>
+        <div id="lista-blocchi"><div class="msg">Caricamento...</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============================================================
+// CONFIGURAZIONE — stessi valori di index.html
+// ============================================================
+const NOME_CENTRO = "Beauty Bellezza & Benessere";
+const DATI_CENTRO = "Centro estetico e podologia · Via Madonna dei Martiri 37, 70056 Molfetta (BA) · Tel. 080 3381245 · Cell. 340 0502289 · P.IVA 06843190726";
+const SUPABASE_URL = "https://hvashsplqpvhskbmizte.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_34RGfQfrcFpf57sn1UZ5ig_oi_sMfHD";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (id) => document.getElementById(id);
+// Tutto ciò che arriva dal database (nomi cliente inclusi) va SEMPRE escapato prima di finire in innerHTML.
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const p2 = n => String(n).padStart(2, "0");
+const isoLocale = d => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+const ora = iso => new Date(iso).toLocaleTimeString("it-IT", { hour:"2-digit", minute:"2-digit" });
+const dataBreve = d => d.toLocaleDateString("it-IT", { day:"numeric", month:"short" });
+const GIORNI = [[1,"Lunedì"],[2,"Martedì"],[3,"Mercoledì"],[4,"Giovedì"],[5,"Venerdì"],[6,"Sabato"],[0,"Domenica"]];
+
+let operatori = [], servizi = [], orari = [], festivita = [], prenotazioniVista = [];
+let filtroOp = "tutti", vista = "giorno", inModifica = null, periodoStats = "tutto";
+
+const nomeOp = id => operatori.find(o => o.id === id)?.nome || "";
+
+// ---------- Login ----------
+$("btn-login").addEventListener("click", async () => {
+  $("login-errore").textContent = "";
+  const { error } = await sb.auth.signInWithPassword({ email: $("login-email").value.trim(), password: $("login-password").value });
+  if (error) { $("login-errore").textContent = "Credenziali non valide."; return; }
+  mostraDashboard();
+});
+$("btn-logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+(async () => { const { data: { session } } = await sb.auth.getSession(); if (session) mostraDashboard(); })();
+
+async function mostraDashboard() {
+  $("login-box").style.display = "none";
+  $("dashboard").style.display = "block";
+  $("titolo-admin").textContent = NOME_CENTRO;
+  $("dati-centro").textContent = DATI_CENTRO;
+  await caricaAnagrafiche();
+  const oggi = isoLocale(new Date());
+  $("data-agenda").value = oggi; $("mp-data").value = oggi; $("bl-da").value = oggi; $("bl-a").value = oggi;
+  aggiornaBloccoUI();
+  caricaVista(); caricaStatistiche(); caricaBlocchi();
+}
+
+async function caricaAnagrafiche() {
+  const [o, s, h, f] = await Promise.all([
+    sb.from("operatori").select("*").order("ordine"),
+    sb.from("servizi").select("*").order("ordine"),
+    sb.from("orari").select("*"),
+    sb.from("festivita_fisse").select("mese, giorno, nome")
+  ]);
+  if (o.error || s.error || h.error || f.error) {
+    alert("Errore nel caricamento dei dati. Se hai appena effettuato l'accesso, verifica che la tua email sia tra gli admin.");
+    return;
+  }
+  operatori = o.data; servizi = s.data; orari = h.data; festivita = f.data;
+  renderChip(); popolaSelectOperatori(); renderServiziAdmin(); renderOrari();
+}
+
+function opzioniOperatori(conCentro) {
+  return (conCentro ? `<option value="">Tutto il centro</option>` : "") +
+    operatori.map(o => `<option value="${o.id}">${esc(o.nome)}${o.attivo ? "" : " (disattivo)"}</option>`).join("");
+}
+function popolaSelectOperatori() {
+  const keep = { mp: $("mp-operatore").value, ns: $("ns-operatore").value, or: $("or-operatore").value, bl: $("bl-operatore").value };
+  $("mp-operatore").innerHTML = opzioniOperatori(false);
+  $("ns-operatore").innerHTML = opzioniOperatori(false);
+  $("or-operatore").innerHTML = opzioniOperatori(false);
+  $("bl-operatore").innerHTML = opzioniOperatori(true);
+  if (keep.mp) $("mp-operatore").value = keep.mp;
+  if (keep.ns) $("ns-operatore").value = keep.ns;
+  if (keep.or) $("or-operatore").value = keep.or;
+  if (keep.bl !== undefined) $("bl-operatore").value = keep.bl;
+  popolaSelectServizio();
+}
+function popolaSelectServizio() {
+  const op = $("mp-operatore").value;
+  $("mp-servizio").innerHTML = servizi.filter(s => s.attivo && s.operatore_id === op)
+    .map(s => `<option value="${s.id}" data-durata="${s.durata_minuti}">${esc(s.nome)} (${s.durata_minuti} min)</option>`).join("");
+}
+$("mp-operatore").addEventListener("change", popolaSelectServizio);
+
+// ---------- Filtro operatore ----------
+function renderChip() {
+  const voci = [["tutti", "Tutti"], ...operatori.filter(o => o.attivo).map(o => [o.id, o.nome])];
+  $("chip-op").innerHTML = voci.map(([id, n]) => `<button data-id="${id}" class="${filtroOp === id ? "attivo" : ""}">${esc(n)}</button>`).join("");
+  $("chip-op").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { filtroOp = b.dataset.id; renderChip(); caricaVista(); caricaStatistiche(); }));
+}
+
+// ---------- Agenda ----------
+$("data-agenda").addEventListener("change", caricaVista);
+$("btn-prec").addEventListener("click", () => sposta(-1));
+$("btn-succ").addEventListener("click", () => sposta(1));
+$("v-giorno").addEventListener("click", () => impostaVista("giorno"));
+$("v-sett").addEventListener("click", () => impostaVista("settimana"));
+function impostaVista(v) {
+  vista = v;
+  $("v-giorno").classList.toggle("attivo", v === "giorno"); $("v-sett").classList.toggle("attivo", v === "settimana");
+  $("titolo-lista").textContent = v === "giorno" ? "Prenotazioni del giorno" : "Prenotazioni della settimana";
+  caricaVista();
+}
+function sposta(dir) {
+  const d = new Date($("data-agenda").value + "T12:00:00");
+  d.setDate(d.getDate() + (vista === "settimana" ? 7 : 1) * dir);
+  $("data-agenda").value = isoLocale(d); caricaVista();
+}
+function lunedi(dataStr) {
+  const d = new Date(dataStr + "T12:00:00"); const g = d.getDay();
+  d.setDate(d.getDate() + (g === 0 ? -6 : 1 - g)); return d;
+}
+async function caricaVista() {
+  $("lista-prenotazioni").innerHTML = `<div class="msg">Caricamento...</div>`;
+  const data = $("data-agenda").value;
+  let da, a;
+  if (vista === "giorno") { da = new Date(data + "T00:00:00"); a = new Date(data + "T00:00:00"); a.setDate(a.getDate() + 1); }
+  else { da = lunedi(data); da.setHours(0,0,0,0); a = new Date(da); a.setDate(a.getDate() + 7); }
+  let q = sb.from("prenotazioni").select("*, servizi(nome)").gte("inizio", da.toISOString()).lt("inizio", a.toISOString()).order("inizio");
+  if (filtroOp !== "tutti") q = q.eq("operatore_id", filtroOp);
+  const { data: righe, error } = await q;
+  if (error) { $("lista-prenotazioni").innerHTML = `<div class="msg">Errore nel caricamento.</div>`; return; }
+  prenotazioniVista = righe || [];
+  vista === "giorno" ? renderGiorno() : renderSettimana(da);
+}
+const azioni = p => p.stato === "confermata"
+  ? `<button title="Modifica" onclick="modificaPrenotazione('${p.id}')">✏️</button><button title="Annulla" onclick="annullaPrenotazione('${p.id}')">🗑️</button>` : "";
+function renderGiorno() {
+  if (!prenotazioniVista.length) { $("lista-prenotazioni").innerHTML = `<div class="msg">Nessuna prenotazione per questo giorno.</div>`; return; }
+  $("lista-prenotazioni").innerHTML = prenotazioniVista.map(p => `
+    <div class="p-riga">
+      <div class="p-ora ${p.stato === "annullata" ? "annullata" : ""}">${ora(p.inizio)}</div>
+      <div class="p-det ${p.stato === "annullata" ? "annullata" : ""}">
+        <div class="nome">${esc(p.nome_cliente)}<span class="tag-op">${esc(nomeOp(p.operatore_id))}</span></div>
+        <div class="info">${esc(p.servizi?.nome)} · ${esc(p.telefono)}</div>
+      </div><div>${azioni(p)}</div>
+    </div>`).join("");
+}
+function renderSettimana(lun) {
+  const oggi = isoLocale(new Date());
+  let html = "";
+  for (let i = 0; i < 7; i++) {
+    const g = new Date(lun); g.setDate(g.getDate() + i);
+    const iso = isoLocale(g);
+    const del = prenotazioniVista.filter(p => isoLocale(new Date(p.inizio)) === iso);
+    html += `<div class="giorno-col"><div class="giorno-titolo ${iso === oggi ? "oggi" : ""}">${g.toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"short" })}</div>` +
+      (del.length ? del.map(p => `<div class="mini ${p.stato === "annullata" ? "annullata" : ""}"><span class="o">${ora(p.inizio)}</span><span class="n">${esc(p.nome_cliente)} · ${esc(p.servizi?.nome)}<span class="tag-op">${esc(nomeOp(p.operatore_id))}</span></span>${azioni(p)}</div>`).join("")
+        : `<div class="msg" style="padding:4px 0">Nessuna prenotazione</div>`) + `</div>`;
+  }
+  $("lista-prenotazioni").innerHTML = html;
+}
+window.annullaPrenotazione = async function(id) {
+  if (!confirm("Annullare questa prenotazione?")) return;
+  const { error } = await sb.from("prenotazioni").update({ stato: "annullata" }).eq("id", id);
+  if (error) { alert("Errore durante l'annullamento."); return; }
+  caricaVista(); caricaStatistiche();
+};
+
+// ---------- Controlli di calendario (per operatore) ----------
+function motivoChiusura(opId, d) {
+  const f = festivita.find(x => x.mese === d.getMonth() + 1 && x.giorno === d.getDate());
+  if (f) return `chiuso per ${f.nome}`;
+  const o = orari.find(x => x.operatore_id === opId && x.giorno_settimana === d.getDay());
+  if (!o || o.chiuso) return `${nomeOp(opId)} non lavora in questo giorno della settimana`;
+  return null;
+}
+// Ritorna un avviso se l'intervallo esce dall'orario di lavoro o cade nella pausa (non bloccante).
+function avvisoOrario(opId, inizio, fine) {
+  const o = orari.find(x => x.operatore_id === opId && x.giorno_settimana === inizio.getDay());
+  if (!o || o.chiuso) return null;
+  const hm = d => p2(d.getHours()) + ":" + p2(d.getMinutes());
+  const i = hm(inizio), f = hm(fine);
+  if (isoLocale(fine) !== isoLocale(inizio) || i < o.apertura.slice(0,5) || f > o.chiusura.slice(0,5)) return "L'orario è fuori dall'orario di lavoro";
+  if (o.pausa_inizio && o.pausa_fine && i < o.pausa_fine.slice(0,5) && f > o.pausa_inizio.slice(0,5)) return "L'orario cade nella pausa";
+  return null;
+}
+async function bloccoSovrapposto(opId, inizioISO, fineISO) {
+  const { data } = await sb.from("blocchi").select("motivo").or(`operatore_id.is.null,operatore_id.eq.${opId}`).lt("inizio", fineISO).gt("fine", inizioISO).limit(1);
+  return data && data.length ? data[0] : null;
+}
+
+// ---------- Prenotazione manuale / modifica / ricorrente ----------
+$("mp-ric").addEventListener("change", () => {
+  const m = $("mp-ric").checked;
+  $("mp-fino").style.display = m ? "inline-block" : "none"; $("mp-fino-l").style.display = m ? "inline" : "none";
+});
+window.modificaPrenotazione = function(id) {
+  const p = prenotazioniVista.find(x => x.id === id);
+  if (!p) { alert("Prenotazione non trovata, ricarica la vista."); return; }
+  inModifica = id;
+  $("mp-operatore").value = p.operatore_id; popolaSelectServizio();
+  $("mp-operatore").disabled = true; // l'operatore non si cambia: per spostare un cliente, annulla e crea una nuova prenotazione
+  $("mp-servizio").value = p.servizio_id;
+  const i = new Date(p.inizio);
+  $("mp-data").value = isoLocale(i); $("mp-ora").value = p2(i.getHours()) + ":" + p2(i.getMinutes());
+  $("mp-nome").value = p.nome_cliente; $("mp-telefono").value = p.telefono;
+  $("mp-ric").checked = false; $("mp-ric").disabled = true; $("mp-ric-riga").style.opacity = ".4";
+  $("mp-titolo").textContent = "Modifica prenotazione";
+  $("card-manuale").classList.add("in-modifica");
+  $("btn-prenota").textContent = "Salva modifiche"; $("btn-annulla-mod").style.display = "inline-block";
+  $("card-manuale").scrollIntoView({ behavior:"smooth", block:"center" });
+};
+$("btn-annulla-mod").addEventListener("click", resetForm);
+function resetForm() {
+  inModifica = null;
+  $("mp-nome").value = ""; $("mp-telefono").value = ""; $("mp-ora").value = "";
+  $("mp-ric").checked = false; $("mp-ric").disabled = false; $("mp-ric-riga").style.opacity = "1";
+  $("mp-fino").style.display = "none"; $("mp-fino-l").style.display = "none";
+  $("mp-operatore").disabled = false;
+  $("mp-titolo").textContent = "Nuova prenotazione manuale";
+  $("card-manuale").classList.remove("in-modifica");
+  $("btn-prenota").textContent = "Prenota"; $("btn-annulla-mod").style.display = "none"; $("mp-errore").textContent = "";
+}
+$("btn-prenota").addEventListener("click", async () => {
+  const err = t => { $("mp-errore").textContent = t; };
+  err("");
+  const opId = $("mp-operatore").value, servizioId = $("mp-servizio").value;
+  const durata = parseInt($("mp-servizio").selectedOptions[0]?.dataset.durata || "0", 10);
+  const data = $("mp-data").value, o = $("mp-ora").value;
+  const nome = $("mp-nome").value.trim(), tel = $("mp-telefono").value.trim();
+  if (!opId || !servizioId || !data || !o || !nome || tel.length < 6) return err("Compila operatore, trattamento, data, ora, nome e telefono.");
+
+  const inizio = new Date(`${data}T${o}:00`), fine = new Date(inizio.getTime() + durata * 60000);
+  const ricorrente = !inModifica && $("mp-ric").checked;
+
+  if (!ricorrente) {
+    const mc = motivoChiusura(opId, inizio);
+    if (mc) return err(`Non è possibile prenotare in questo giorno: ${mc}.`);
+    const bl = await bloccoSovrapposto(opId, inizio.toISOString(), fine.toISOString());
+    if (bl) return err(`Questo orario è bloccato in calendario${bl.motivo ? " (" + bl.motivo + ")" : ""}.`);
+    const av = avvisoOrario(opId, inizio, fine);
+    if (av && !confirm(`${av} di ${nomeOp(opId)}. Prenotare comunque?`)) return;
+  }
+
+  if (inModifica) {
+    const { error } = await sb.from("prenotazioni").update({ servizio_id: servizioId, nome_cliente: nome, telefono: tel, inizio: inizio.toISOString(), fine: fine.toISOString() }).eq("id", inModifica);
+    if (error) return err(error.code === "23P01" ? "Il nuovo orario si sovrappone a un'altra prenotazione di questo operatore." : "Errore durante il salvataggio.");
+    resetForm(); caricaVista(); caricaStatistiche(); return;
+  }
+
+  if (ricorrente) {
+    const finoAl = $("mp-fino").value;
+    if (!finoAl) return err("Indica fino a quando ripetere la prenotazione.");
+    const dataFine = new Date(finoAl + "T23:59:59");
+    if (dataFine < inizio) return err("La data \"fino al\" deve essere successiva alla prima data.");
+    const occ = []; let c = new Date(inizio);
+    while (c <= dataFine && occ.length < 52) { occ.push(new Date(c)); c = new Date(c); c.setDate(c.getDate() + 7); } // +7 giorni di calendario: regge il cambio ora legale
+    const ok = [], saltate = [];
+    for (const d of occ) {
+      const f = new Date(d.getTime() + durata * 60000);
+      const mc = motivoChiusura(opId, d);
+      if (mc) { saltate.push(`${dataBreve(d)} (${mc})`); continue; }
+      if (avvisoOrario(opId, d, f)) { saltate.push(`${dataBreve(d)} (fuori orario di lavoro o in pausa)`); continue; }
+      if (await bloccoSovrapposto(opId, d.toISOString(), f.toISOString())) { saltate.push(`${dataBreve(d)} (bloccato in calendario)`); continue; }
+      const { error } = await sb.from("prenotazioni").insert({ operatore_id: opId, nome_cliente: nome, telefono: tel, servizio_id: servizioId, inizio: d.toISOString(), fine: f.toISOString(), stato: "confermata" });
+      error ? saltate.push(`${dataBreve(d)} (sovrapposta a un'altra prenotazione)`) : ok.push(d);
+    }
+    alert(`Create ${ok.length} prenotazioni su ${occ.length}.` + (saltate.length ? `\n\nSaltate:\n${saltate.join("\n")}` : ""));
+    resetForm(); caricaVista(); caricaStatistiche(); return;
+  }
+
+  const { error } = await sb.from("prenotazioni").insert({ operatore_id: opId, nome_cliente: nome, telefono: tel, servizio_id: servizioId, inizio: inizio.toISOString(), fine: fine.toISOString(), stato: "confermata" });
+  if (error) return err(error.code === "23P01" ? "Questo orario si sovrappone a un'altra prenotazione di questo operatore." : "Errore durante l'inserimento.");
+  $("mp-nome").value = ""; $("mp-telefono").value = ""; $("mp-ora").value = "";
+  caricaVista(); caricaStatistiche();
+});
+
+// ---------- Trattamenti ----------
+function renderServiziAdmin() {
+  if (!servizi.length) { $("lista-servizi").innerHTML = `<div class="msg">Nessun trattamento ancora.</div>`; return; }
+  $("lista-servizi").innerHTML = operatori.map(op => {
+    const mie = servizi.filter(s => s.operatore_id === op.id);
+    return `<div class="gruppo-titolo">${esc(op.nome)}</div>` + (mie.length ? mie.map(sv => `
+      <div class="serv-riga ${sv.attivo ? "" : "disattivo"}" data-id="${sv.id}">
+        <input type="text" class="s-nome" value="${esc(sv.nome)}">
+        <span>min</span><input type="number" class="s-durata" value="${sv.durata_minuti}" min="5" step="5">
+        <span>€</span><input type="number" class="s-prezzo" value="${sv.prezzo ?? ""}" min="0" step="0.5">
+        <div class="az">
+          <button onclick="salvaServizio('${sv.id}')" title="Salva">💾</button>
+          <button onclick="toggleServizio('${sv.id}', ${sv.attivo})" title="${sv.attivo ? "Disattiva" : "Riattiva"}">${sv.attivo ? "🚫" : "✅"}</button>
+          <button onclick="eliminaServizio('${sv.id}')" title="Elimina">🗑️</button>
+        </div>
+      </div>`).join("") : `<div class="msg" style="padding:6px">Nessun trattamento</div>`);
+  }).join("");
+}
+window.salvaServizio = async function(id) {
+  const r = document.querySelector(`.serv-riga[data-id="${id}"]`);
+  const nome = r.querySelector(".s-nome").value.trim(), durata = parseInt(r.querySelector(".s-durata").value, 10), prezzo = parseFloat(r.querySelector(".s-prezzo").value);
+  if (!nome || !durata || durata <= 0) return alert("Nome e durata (minuti > 0) sono obbligatori.");
+  const { error } = await sb.from("servizi").update({ nome, durata_minuti: durata, prezzo: isNaN(prezzo) ? null : prezzo }).eq("id", id);
+  if (error) return alert("Errore durante il salvataggio.");
+  await ricaricaServizi();
+};
+window.toggleServizio = async function(id, attivo) {
+  const { error } = await sb.from("servizi").update({ attivo: !attivo }).eq("id", id);
+  if (error) return alert("Errore durante l'operazione.");
+  await ricaricaServizi();
+};
+window.eliminaServizio = async function(id) {
+  if (!confirm("Eliminare definitivamente questo trattamento? Se è già stato usato in una prenotazione verrà rifiutato: in quel caso disattivalo.")) return;
+  const { error } = await sb.from("servizi").delete().eq("id", id);
+  if (error) return alert(error.code === "23503" ? "Questo trattamento è collegato a prenotazioni esistenti. Usa 🚫 per disattivarlo: sparirà dal sito ma lo storico resta." : "Errore durante l'eliminazione.");
+  await ricaricaServizi();
+};
+async function ricaricaServizi() {
+  const { data } = await sb.from("servizi").select("*").order("ordine");
+  servizi = data || []; renderServiziAdmin(); popolaSelectServizio(); caricaStatistiche();
+}
+$("btn-add-servizio").addEventListener("click", async () => {
+  const nome = $("ns-nome").value.trim(), durata = parseInt($("ns-durata").value, 10), prezzo = parseFloat($("ns-prezzo").value), op = $("ns-operatore").value;
+  if (!op || !nome || !durata || durata <= 0) return alert("Operatore, nome e durata (minuti > 0) sono obbligatori.");
+  const { error } = await sb.from("servizi").insert({ operatore_id: op, nome, durata_minuti: durata, prezzo: isNaN(prezzo) ? null : prezzo, attivo: true, ordine: servizi.length });
+  if (error) return alert("Errore durante l'aggiunta.");
+  $("ns-nome").value = ""; $("ns-durata").value = ""; $("ns-prezzo").value = "";
+  await ricaricaServizi();
+});
+
+// ---------- Operatori e orari ----------
+function renderOrari() {
+  const op = operatori.find(o => o.id === $("or-operatore").value);
+  if (!op) { $("orari-body").innerHTML = ""; return; }
+  $("or-nome").value = op.nome;
+  $("btn-toggle-op").textContent = op.attivo ? "Disattiva operatore" : "Riattiva operatore";
+  $("orari-body").innerHTML = GIORNI.map(([g, nome]) => {
+    const o = orari.find(x => x.operatore_id === op.id && x.giorno_settimana === g) || { chiuso: true };
+    const t = v => (v || "").slice(0, 5);
+    return `<tr data-g="${g}"><td>${nome}</td><td><input type="checkbox" class="o-chiuso" ${o.chiuso ? "checked" : ""}></td>
+      <td><input type="time" class="o-ap" value="${t(o.apertura)}"></td><td><input type="time" class="o-ch" value="${t(o.chiusura)}"></td>
+      <td><input type="time" class="o-pi" value="${t(o.pausa_inizio)}"></td><td><input type="time" class="o-pf" value="${t(o.pausa_fine)}"></td></tr>`;
+  }).join("");
+}
+$("or-operatore").addEventListener("change", renderOrari);
+$("btn-salva-orari").addEventListener("click", async () => {
+  $("or-errore").textContent = "";
+  const opId = $("or-operatore").value;
+  const righe = [...$("orari-body").querySelectorAll("tr")].map(tr => {
+    const chiuso = tr.querySelector(".o-chiuso").checked, v = c => tr.querySelector(c).value || null;
+    return { operatore_id: opId, giorno_settimana: +tr.dataset.g, chiuso,
+      apertura: chiuso ? null : v(".o-ap"), chiusura: chiuso ? null : v(".o-ch"),
+      pausa_inizio: chiuso ? null : v(".o-pi"), pausa_fine: chiuso ? null : v(".o-pf") };
+  });
+  for (const r of righe) {
+    if (!r.chiuso && (!r.apertura || !r.chiusura || r.chiusura <= r.apertura)) { $("or-errore").textContent = "Per ogni giorno aperto indica apertura e chiusura valide."; return; }
+    if ((r.pausa_inizio || r.pausa_fine) && !(r.pausa_inizio && r.pausa_fine && r.pausa_fine > r.pausa_inizio)) { $("or-errore").textContent = "La pausa richiede inizio e fine validi (oppure lasciala vuota)."; return; }
+  }
+  const { error } = await sb.from("orari").upsert(righe, { onConflict: "operatore_id,giorno_settimana" });
+  if (error) { $("or-errore").textContent = "Errore durante il salvataggio."; return; }
+  const { data } = await sb.from("orari").select("*"); orari = data || [];
+  alert("Orari salvati.");
+});
+$("btn-rinomina-op").addEventListener("click", async () => {
+  const nome = $("or-nome").value.trim(); if (!nome) return;
+  const { error } = await sb.from("operatori").update({ nome }).eq("id", $("or-operatore").value);
+  if (error) return alert("Errore durante il salvataggio.");
+  await caricaAnagrafiche();
+});
+$("btn-toggle-op").addEventListener("click", async () => {
+  const op = operatori.find(o => o.id === $("or-operatore").value);
+  if (op.attivo && !confirm(`Disattivare ${op.nome}? Sparirà dal sito pubblico; le prenotazioni già fissate restano in agenda.`)) return;
+  const { error } = await sb.from("operatori").update({ attivo: !op.attivo }).eq("id", op.id);
+  if (error) return alert("Errore durante l'operazione.");
+  await caricaAnagrafiche();
+});
+$("btn-add-op").addEventListener("click", async () => {
+  const nome = $("nuovo-op-nome").value.trim(); if (!nome) return;
+  const { data, error } = await sb.from("operatori").insert({ nome, ordine: operatori.length + 1 }).select().single();
+  if (error) return alert("Errore durante l'aggiunta.");
+  // orari iniziali: tutti i giorni chiusi, da configurare
+  await sb.from("orari").insert([0,1,2,3,4,5,6].map(g => ({ operatore_id: data.id, giorno_settimana: g, chiuso: true })));
+  $("nuovo-op-nome").value = "";
+  await caricaAnagrafiche(); $("or-operatore").value = data.id; renderOrari();
+  alert("Operatore aggiunto. Imposta ora i suoi orari e aggiungi i suoi trattamenti.");
+});
+
+// ---------- Blocchi ----------
+function aggiornaBloccoUI() {
+  const stesso = $("bl-da").value === $("bl-a").value, cb = $("bl-tutto");
+  if (!stesso) { cb.checked = true; cb.disabled = true; } else cb.disabled = false;
+  $("bl-ora-da").disabled = $("bl-ora-a").disabled = cb.checked;
+}
+$("bl-da").addEventListener("change", () => { if ($("bl-a").value < $("bl-da").value) $("bl-a").value = $("bl-da").value; aggiornaBloccoUI(); });
+$("bl-a").addEventListener("change", aggiornaBloccoUI);
+$("bl-tutto").addEventListener("change", aggiornaBloccoUI);
+$("btn-blocca").addEventListener("click", async () => {
+  const err = t => { $("bl-errore").textContent = t; }; err("");
+  const opId = $("bl-operatore").value || null;
+  const da = $("bl-da").value, a = $("bl-a").value;
+  if (!da || !a) return err("Inserisci data inizio e data fine.");
+  if (a < da) return err("La data di fine non può precedere quella di inizio.");
+  let inizio, fine;
+  if ($("bl-tutto").checked) { inizio = new Date(`${da}T00:00:00`); fine = new Date(`${a}T00:00:00`); fine.setDate(fine.getDate() + 1); } // fine esclusiva: mezzanotte successiva
+  else {
+    const oa = $("bl-ora-da").value, ob = $("bl-ora-a").value;
+    if (!oa || !ob) return err("Inserisci ora inizio e fine, oppure spunta \"Tutto il giorno\".");
+    if (ob <= oa) return err("L'ora di fine deve essere successiva a quella di inizio.");
+    inizio = new Date(`${da}T${oa}:00`); fine = new Date(`${da}T${ob}:00`);
+  }
+  let q = sb.from("prenotazioni").select("nome_cliente, inizio, operatore_id, servizi(nome)").eq("stato", "confermata").lt("inizio", fine.toISOString()).gt("fine", inizio.toISOString()).order("inizio");
+  if (opId) q = q.eq("operatore_id", opId);
+  const { data: sov, error: e1 } = await q;
+  if (e1) return err("Errore durante il controllo delle prenotazioni esistenti.");
+  if (sov.length && !confirm(`Attenzione: in questo intervallo ci sono già ${sov.length} prenotazione/i confermata/e:\n\n` +
+      sov.map(p => `• ${dataBreve(new Date(p.inizio))} ${ora(p.inizio)} — ${p.nome_cliente} (${p.servizi?.nome || ""}, ${nomeOp(p.operatore_id)})`).join("\n") +
+      `\n\nIl blocco NON le annulla: resteranno in agenda. Procedere comunque?`)) return;
+  const { error } = await sb.from("blocchi").insert({ operatore_id: opId, inizio: inizio.toISOString(), fine: fine.toISOString(), motivo: $("bl-motivo").value.trim() || null });
+  if (error) return err("Errore durante il blocco dell'intervallo.");
+  $("bl-motivo").value = ""; caricaBlocchi();
+});
+async function caricaBlocchi() {
+  const { data, error } = await sb.from("blocchi").select("*").gte("fine", new Date().toISOString()).order("inizio");
+  if (error) { $("lista-blocchi").innerHTML = `<div class="msg">Errore nel caricamento.</div>`; return; }
+  if (!data.length) { $("lista-blocchi").innerHTML = `<div class="msg">Nessun blocco in programma.</div>`; return; }
+  $("lista-blocchi").innerHTML = data.map(b => {
+    const i = new Date(b.inizio), f = new Date(b.fine);
+    const tuttoGiorno = i.getHours() === 0 && i.getMinutes() === 0 && f.getHours() === 0 && f.getMinutes() === 0;
+    let et;
+    if (tuttoGiorno) { const ultimo = new Date(f); ultimo.setDate(ultimo.getDate() - 1); et = isoLocale(i) === isoLocale(ultimo) ? `${dataBreve(i)} · Tutto il giorno` : `dal ${dataBreve(i)} al ${dataBreve(ultimo)}`; }
+    else et = `${dataBreve(i)} · ${ora(b.inizio)}–${ora(b.fine)}`;
+    return `<div class="blocco-riga"><div class="i"><b>${et}</b> <span class="tag-op">${b.operatore_id ? esc(nomeOp(b.operatore_id)) : "Tutto il centro"}</span>${b.motivo ? `<div style="color:#777;font-size:.78rem">${esc(b.motivo)}</div>` : ""}</div><button title="Rimuovi" onclick="eliminaBlocco('${b.id}')">🗑️</button></div>`;
+  }).join("");
+}
+window.eliminaBlocco = async function(id) {
+  if (!confirm("Rimuovere questo blocco? Gli slot torneranno prenotabili.")) return;
+  const { error } = await sb.from("blocchi").delete().eq("id", id);
+  if (error) return alert("Errore durante la rimozione.");
+  caricaBlocchi();
+};
+
+// ---------- Statistiche ----------
+[["7g","st-7g"],["mese","st-mese"],["tutto","st-tutto"]].forEach(([p, id]) => $(id).addEventListener("click", () => {
+  periodoStats = p; ["st-7g","st-mese","st-tutto"].forEach(x => $(x).classList.toggle("attivo", x === id)); caricaStatistiche();
+}));
+async function caricaStatistiche() {
+  let q = sb.from("prenotazioni").select("servizio_id, operatore_id, stato, inizio");
+  if (periodoStats !== "tutto") { const da = new Date(); da.setDate(da.getDate() - (periodoStats === "7g" ? 7 : 30)); q = q.gte("inizio", da.toISOString()); }
+  if (filtroOp !== "tutti") q = q.eq("operatore_id", filtroOp);
+  const { data, error } = await q;
+  if (error) { $("stats").innerHTML = `<div class="msg">Errore nel caricamento.</div>`; return; }
+  const conf = data.filter(p => p.stato === "confermata"), ann = data.length - conf.length;
+  const cont = {}; conf.forEach(p => cont[p.servizio_id] = (cont[p.servizio_id] || 0) + 1);
+  const visibili = servizi.filter(s => filtroOp === "tutti" || s.operatore_id === filtroOp);
+  let incasso = 0;
+  const righe = visibili.map(s => { const c = cont[s.id] || 0, inc = c * Number(s.prezzo || 0); incasso += inc; return { s, c, inc }; }).sort((a, b) => b.c - a.c);
+  $("stats").innerHTML = `<div class="stats-riep">
+      <div class="stats-box"><div class="v">${conf.length}</div><div class="e">Confermate</div></div>
+      <div class="stats-box"><div class="v">${ann}</div><div class="e">Annullate</div></div>
+      <div class="stats-box"><div class="v">€ ${incasso.toFixed(0)}</div><div class="e">Incasso stimato</div></div></div>` +
+    (righe.length ? righe.map(r => `<div class="st-riga"><span class="a" style="${r.s.attivo ? "" : "color:#999;font-style:italic"}">${esc(r.s.nome)}${r.s.attivo ? "" : " (disattivo)"} <span class="tag-op">${esc(nomeOp(r.s.operatore_id))}</span></span><span class="b">${r.c}</span><span class="c">€ ${r.inc.toFixed(0)}</span></div>`).join("")
+      : `<div class="msg">Nessun trattamento a catalogo.</div>`);
+}
+</script>
+</body>
+</html>
