@@ -175,16 +175,24 @@
 
 <main id="app">
 
-  <div class="avviso-primo" id="avviso-primo">
+  <div class="step" id="step-primo">
     <h2>È la prima volta da noi?</h2>
-    <p>Prima di prenotare online ti invitiamo a telefonarci: insieme valuteremo le tue esigenze e il trattamento più adatto a te.</p>
+    <div class="operatori">
+      <button class="op-btn" id="btn-primo-si" onclick="primaVolta(true)">Sì, prima volta</button>
+      <button class="op-btn" id="btn-primo-no" onclick="primaVolta(false)">No, sono già cliente</button>
+    </div>
+  </div>
+
+  <div class="avviso-primo" id="avviso-primo" style="display:none">
+    <h2>Ti diamo il benvenuto!</h2>
+    <p>Per il primo appuntamento ti chiediamo di telefonarci: insieme valuteremo le tue esigenze e il trattamento più adatto a te. Dalla volta successiva potrai prenotare qui online.</p>
     <div class="chiama">
       <a href="tel:0803381245"><small>Telefono</small>080 3381245</a>
       <a href="tel:3400502289"><small>Cellulare</small>340 0502289</a>
     </div>
   </div>
 
-  <div class="step" id="step-operatore">
+  <div class="step" id="step-operatore" style="display:none">
     <h2>1. Con chi vuoi prenotare?</h2>
     <div class="operatori" id="lista-operatori"><div class="msg">Caricamento...</div></div>
   </div>
@@ -290,11 +298,29 @@ async function init() {
   $("input-data").min = toISODate(new Date());
   $("input-data").max = dataMassima();
   $("input-data").value = toISODate(new Date());
+  if (giaCliente()) { $("step-primo").style.display = "none"; $("step-operatore").style.display = "block"; }
 }
 
 // Prenotabile al massimo GIORNI_ANTICIPO giorni in avanti (stesso limite applicato dal database)
 const GIORNI_ANTICIPO = 60;
 function dataMassima() { const d = new Date(); d.setDate(d.getDate() + GIORNI_ANTICIPO); return toISODate(d); }
+
+// ---------- Prima volta? ----------
+// Chi ha già prenotato da questo dispositivo salta la domanda.
+const CHIAVE_CLIENTE = "beauty_gia_cliente";
+function giaCliente() { try { return localStorage.getItem(CHIAVE_CLIENTE) === "1"; } catch (e) { return false; } }
+function segnaCliente() { try { localStorage.setItem(CHIAVE_CLIENTE, "1"); } catch (e) {} }
+
+window.primaVolta = function(si) {
+  $("btn-primo-si").classList.toggle("selezionato", si);
+  $("btn-primo-no").classList.toggle("selezionato", !si);
+  // ogni cambio di risposta riparte da zero
+  operatoreScelto = null; serviziScelti = []; slotScelto = null;
+  document.querySelectorAll(".op-btn[data-id]").forEach(b => b.classList.remove("selezionato"));
+  ["step-servizio", "step-data", "step-slot", "step-dati"].forEach(id => $(id).style.display = "none");
+  $("avviso-primo").style.display = si ? "block" : "none";
+  $("step-operatore").style.display = si ? "none" : "block";
+};
 
 window.scegliOperatore = function(id) {
   operatoreScelto = operatori.find(o => o.id === id);
@@ -450,6 +476,7 @@ $("btn-conferma").addEventListener("click", async () => {
     aggiornaSlot();
     return;
   }
+  segnaCliente();
   document.querySelectorAll(".step").forEach(el => el.style.display = "none");
   $("avviso-primo").style.display = "none";
   $("step-ok").style.display = "block";
