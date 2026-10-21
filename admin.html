@@ -62,6 +62,12 @@
   .st-riga { display:flex; padding:7px 0; border-bottom:1px solid var(--bordo); font-size:.88rem; }
   .st-riga .a { flex:1; } .st-riga .b { width:60px; text-align:center; font-weight:600; } .st-riga .c { width:80px; text-align:right; color:var(--verde); font-weight:600; }
   .blocco-riga { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid var(--bordo); font-size:.85rem; }
+  .cl-lista { max-height:380px; overflow-y:auto; }
+  .cl-riga { display:flex; align-items:center; padding:9px 0; border-bottom:1px solid var(--bordo); font-size:.88rem; }
+  .cl-riga:last-child { border-bottom:none; }
+  .cl-riga .d { flex:1; min-width:0; } .cl-riga .nome { font-weight:600; }
+  .cl-riga .info { font-size:.8rem; color:#666; overflow-wrap:anywhere; } .cl-riga .info a { color:inherit; }
+  .cl-riga button { border:none; background:transparent; cursor:pointer; font-size:1.05rem; padding:4px 6px; }
   .blocco-riga .i { flex:1; } .blocco-riga button { border:none; background:transparent; cursor:pointer; color:var(--rosso); font-size:1rem; }
 </style>
 </head>
@@ -110,6 +116,26 @@
         <button class="btn verde" id="btn-prenota">Prenota</button>
         <button class="btn neutro" id="btn-annulla-mod" style="display:none">Annulla modifica</button>
         <div class="form-errore" id="mp-errore"></div>
+      </div>
+    </div>
+
+    <div class="card" id="card-clienti">
+      <p class="sezione-titolo">Clienti</p>
+      <div class="riga-form"><input type="text" id="cl-cerca" placeholder="Cerca per nome o telefono" style="flex:1"></div>
+      <div id="cl-conteggio" style="font-size:.8rem;color:#777;margin-bottom:4px"></div>
+      <div id="lista-clienti" class="cl-lista"><div class="msg">Caricamento...</div></div>
+      <div id="cl-form" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--bordo)">
+        <p class="sezione-titolo" style="font-size:.85rem" id="cl-titolo">Nuovo cliente</p>
+        <div class="riga-form">
+          <input type="text" id="cl-nome" placeholder="Nome e cognome">
+          <input type="tel" id="cl-telefono" placeholder="Telefono">
+        </div>
+        <div class="riga-form"><input type="text" id="cl-indirizzo" placeholder="Indirizzo (facoltativo)" style="flex:1"></div>
+        <div class="riga-form">
+          <button class="btn verde" id="btn-salva-cliente">Aggiungi cliente</button>
+          <button class="btn neutro" id="btn-annulla-cliente" style="display:none">Annulla modifica</button>
+          <div class="form-errore" id="cl-errore"></div>
+        </div>
       </div>
     </div>
 
@@ -210,7 +236,7 @@ async function mostraDashboard() {
   const oggi = isoLocale(new Date());
   $("data-agenda").value = oggi; $("mp-data").value = oggi; $("bl-da").value = oggi; $("bl-a").value = oggi;
   aggiornaBloccoUI();
-  caricaVista(); caricaStatistiche(); caricaBlocchi();
+  caricaVista(); caricaStatistiche(); caricaBlocchi(); caricaClienti();
 }
 
 async function caricaAnagrafiche() {
@@ -322,7 +348,7 @@ window.annullaPrenotazione = async function(id) {
   if (!confirm("Annullare questa prenotazione?")) return;
   const { error } = await sb.from("prenotazioni").update({ stato: "annullata" }).eq("id", id);
   if (error) { alert("Errore durante l'annullamento."); return; }
-  caricaVista(); caricaStatistiche();
+  caricaVista(); caricaStatistiche(); caricaClienti();
 };
 
 // ---------- Controlli di calendario (per operatore) ----------
@@ -404,7 +430,7 @@ $("btn-prenota").addEventListener("click", async () => {
   if (inModifica) {
     const { error } = await sb.from("prenotazioni").update({ servizio_id: servizioId, nome_cliente: nome, telefono: tel, inizio: inizio.toISOString(), fine: fine.toISOString() }).eq("id", inModifica);
     if (error) return err(error.code === "23P01" ? "Il nuovo orario si sovrappone a un'altra prenotazione di questo operatore." : "Errore durante il salvataggio.");
-    resetForm(); caricaVista(); caricaStatistiche(); return;
+    resetForm(); caricaVista(); caricaStatistiche(); caricaClienti(); return;
   }
 
   if (ricorrente) {
@@ -425,13 +451,102 @@ $("btn-prenota").addEventListener("click", async () => {
       error ? saltate.push(`${dataBreve(d)} (sovrapposta a un'altra prenotazione)`) : ok.push(d);
     }
     alert(`Create ${ok.length} prenotazioni su ${occ.length}.` + (saltate.length ? `\n\nSaltate:\n${saltate.join("\n")}` : ""));
-    resetForm(); caricaVista(); caricaStatistiche(); return;
+    resetForm(); caricaVista(); caricaStatistiche(); caricaClienti(); return;
   }
 
   const { error } = await sb.from("prenotazioni").insert({ operatore_id: opId, nome_cliente: nome, telefono: tel, servizio_id: servizioId, inizio: inizio.toISOString(), fine: fine.toISOString(), stato: "confermata" });
   if (error) return err(error.code === "23P01" ? "Questo orario si sovrappone a un'altra prenotazione di questo operatore." : "Errore durante l'inserimento.");
   $("mp-nome").value = ""; $("mp-telefono").value = ""; $("mp-ora").value = "";
-  caricaVista(); caricaStatistiche();
+  caricaVista(); caricaStatistiche(); caricaClienti();
+});
+
+// ---------- Clienti ----------
+// Il database crea il cliente in automatico a ogni prenotazione (dal sito o da qui), riconoscendolo dal telefono.
+let clienti = [], clienteInModifica = null;
+const soloCifre = t => {
+  let d = String(t || "").replace(/\D/g, "");
+  if (d.startsWith("0039")) d = d.slice(4); else if (d.startsWith("39") && d.length >= 12) d = d.slice(2);
+  return d;
+};
+async function caricaClienti() {
+  const { data, error } = await sb.from("clienti").select("id, nome, telefono, indirizzo, prenotazioni(inizio, stato)").order("nome");
+  if (error) { $("lista-clienti").innerHTML = `<div class="msg">Errore nel caricamento.</div>`; return; }
+  clienti = (data || []).map(c => {
+    const conf = (c.prenotazioni || []).filter(p => p.stato === "confermata").map(p => new Date(p.inizio));
+    const ora = new Date(), futuri = conf.filter(d => d >= ora), passati = conf.filter(d => d < ora);
+    return { ...c, n: conf.length,
+      prossimo: futuri.length ? new Date(Math.min(...futuri)) : null,
+      ultimo: passati.length ? new Date(Math.max(...passati)) : null };
+  });
+  renderClienti();
+}
+function renderClienti() {
+  const q = $("cl-cerca").value.trim().toLowerCase();
+  // nella ricerca il numero può essere parziale: "+39 333 11" va trattato come "33311"
+  let qd = q.replace(/\D/g, "");
+  if (q.startsWith("+39") || qd.startsWith("0039")) qd = qd.replace(/^(0039|39)/, "");
+  const lista = clienti.filter(c => !q || c.nome.toLowerCase().includes(q) || (qd.length >= 3 && soloCifre(c.telefono).includes(qd)));
+  $("cl-conteggio").textContent = q ? `${lista.length} su ${clienti.length} clienti` : `${clienti.length} clienti`;
+  if (!lista.length) { $("lista-clienti").innerHTML = `<div class="msg">${clienti.length ? "Nessun cliente trovato." : "Nessun cliente ancora."}</div>`; return; }
+  $("lista-clienti").innerHTML = lista.map(c => `
+    <div class="cl-riga">
+      <div class="d">
+        <div class="nome">${esc(c.nome)}</div>
+        <div class="info"><a href="tel:${esc(soloCifre(c.telefono))}">${esc(c.telefono)}</a>${c.indirizzo ? " · " + esc(c.indirizzo) : ""}</div>
+        <div class="info">${c.n ? `${c.n} appuntament${c.n === 1 ? "o" : "i"}` + (c.prossimo ? ` · prossimo ${dataBreve(c.prossimo)}` : "") + (c.ultimo ? ` · ultimo ${dataBreve(c.ultimo)} ${c.ultimo.getFullYear()}` : "") : "Nessun appuntamento"}</div>
+      </div>
+      <button title="Modifica" onclick="modificaCliente('${c.id}')">✏️</button>
+      <button title="Elimina" onclick="eliminaCliente('${c.id}')">🗑️</button>
+    </div>`).join("");
+}
+$("cl-cerca").addEventListener("input", renderClienti);
+
+window.modificaCliente = function(id) {
+  const c = clienti.find(x => x.id === id); if (!c) return;
+  clienteInModifica = id;
+  $("cl-nome").value = c.nome; $("cl-telefono").value = c.telefono; $("cl-indirizzo").value = c.indirizzo || "";
+  $("cl-titolo").textContent = "Modifica cliente"; $("btn-salva-cliente").textContent = "Salva modifiche";
+  $("btn-annulla-cliente").style.display = "inline-block"; $("cl-errore").textContent = "";
+  $("cl-form").scrollIntoView({ behavior:"smooth", block:"center" });
+};
+function resetCliente() {
+  clienteInModifica = null;
+  $("cl-nome").value = ""; $("cl-telefono").value = ""; $("cl-indirizzo").value = "";
+  $("cl-titolo").textContent = "Nuovo cliente"; $("btn-salva-cliente").textContent = "Aggiungi cliente";
+  $("btn-annulla-cliente").style.display = "none"; $("cl-errore").textContent = "";
+}
+$("btn-annulla-cliente").addEventListener("click", resetCliente);
+$("btn-salva-cliente").addEventListener("click", async () => {
+  const err = t => { $("cl-errore").textContent = t; }; err("");
+  const nome = $("cl-nome").value.trim(), telefono = $("cl-telefono").value.trim(), indirizzo = $("cl-indirizzo").value.trim() || null;
+  if (!nome) return err("Inserisci il nome.");
+  if (soloCifre(telefono).length < 6) return err("Inserisci un numero di telefono valido.");
+  const riga = { nome, telefono, indirizzo };
+  const { error } = clienteInModifica
+    ? await sb.from("clienti").update(riga).eq("id", clienteInModifica)
+    : await sb.from("clienti").insert(riga);
+  if (error) {
+    if (error.code === "23505") {
+      const gia = clienti.find(c => soloCifre(c.telefono) === soloCifre(telefono));
+      return err(`Questo numero è già registrato${gia ? " per " + gia.nome : ""}.`);
+    }
+    return err("Errore durante il salvataggio.");
+  }
+  resetCliente(); caricaClienti();
+});
+window.eliminaCliente = async function(id) {
+  const c = clienti.find(x => x.id === id); if (!c) return;
+  if (!confirm(`Eliminare ${c.nome} dall'anagrafica?\n\nLe sue prenotazioni restano in agenda. Se il cliente ha chiesto di cancellare i suoi dati, annulla ed elimina anche le prenotazioni.`)) return;
+  const { error } = await sb.from("clienti").delete().eq("id", id);
+  if (error) return alert("Errore durante l'eliminazione.");
+  if (clienteInModifica === id) resetCliente();
+  caricaClienti();
+};
+
+// Prenotazione manuale: se il telefono è di un cliente noto, compila il nome
+$("mp-telefono").addEventListener("change", () => {
+  const c = clienti.find(x => soloCifre(x.telefono) === soloCifre($("mp-telefono").value));
+  if (c && !$("mp-nome").value.trim()) $("mp-nome").value = c.nome;
 });
 
 // ---------- Trattamenti ----------
