@@ -68,6 +68,15 @@
   .cl-riga .d { flex:1; min-width:0; } .cl-riga .nome { font-weight:600; }
   .cl-riga .info { font-size:.8rem; color:#666; overflow-wrap:anywhere; } .cl-riga .info a { color:inherit; }
   .cl-riga button { border:none; background:transparent; cursor:pointer; font-size:1.05rem; padding:4px 6px; }
+  .cl-riga .btn-storico { font-size:.78rem; border:1px solid var(--bordo); border-radius:14px; padding:4px 10px; color:var(--blu); background:white; }
+  .cl-riga .btn-storico.aperto { background:var(--accento); color:white; border-color:var(--accento); }
+  .cl-storico { background:var(--sfondo); border-radius:8px; padding:8px 12px; margin:0 0 10px; }
+  .st-titolo { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--accento); margin:8px 0 2px; }
+  .st-app { padding:7px 0; border-bottom:1px solid var(--bordo); font-size:.84rem; }
+  .st-app:last-of-type { border-bottom:none; }
+  .st-app .q { font-weight:600; color:var(--blu); text-transform:capitalize; }
+  .st-app .t { color:#444; } .st-app .pz { float:right; color:#666; }
+  .st-tot { font-size:.8rem; color:#555; padding-top:8px; margin-top:4px; border-top:1px dashed var(--bordo); }
   .blocco-riga .i { flex:1; } .blocco-riga button { border:none; background:transparent; cursor:pointer; color:var(--rosso); font-size:1rem; }
 </style>
 </head>
@@ -468,13 +477,28 @@ const soloCifre = t => {
   if (d.startsWith("0039")) d = d.slice(4); else if (d.startsWith("39") && d.length >= 12) d = d.slice(2);
   return d;
 };
+// Più trattamenti prenotati insieme (stesso gruppo_id) = un solo appuntamento
+function raggruppa(righe) {
+  const m = new Map();
+  for (const r of righe || []) {
+    const k = r.gruppo_id || r.id, i = new Date(r.inizio);
+    if (!m.has(k)) m.set(k, { inizio: i, annullato: true, operatore_id: r.operatore_id, servizi: [], prezzo: 0 });
+    const g = m.get(k);
+    if (i < g.inizio) g.inizio = i;
+    if (r.stato === "confermata") g.annullato = false;
+    if (r.servizi) { g.servizi.push(r.servizi.nome); g.prezzo += Number(r.servizi.prezzo || 0); }
+  }
+  return [...m.values()];
+}
+let clienteAperto = null;
 async function caricaClienti() {
-  const { data, error } = await sb.from("clienti").select("id, nome, telefono, indirizzo, prenotazioni(inizio, stato)").order("nome");
+  const { data, error } = await sb.from("clienti").select("id, nome, telefono, indirizzo, prenotazioni(id, gruppo_id, inizio, stato)").order("nome");
   if (error) { $("lista-clienti").innerHTML = `<div class="msg">Errore nel caricamento.</div>`; return; }
+  const ora = new Date();
   clienti = (data || []).map(c => {
-    const conf = (c.prenotazioni || []).filter(p => p.stato === "confermata").map(p => new Date(p.inizio));
-    const ora = new Date(), futuri = conf.filter(d => d >= ora), passati = conf.filter(d => d < ora);
-    return { ...c, n: conf.length,
+    const app = raggruppa(c.prenotazioni).filter(a => !a.annullato).map(a => a.inizio);
+    const futuri = app.filter(d => d >= ora), passati = app.filter(d => d < ora);
+    return { ...c, n: app.length,
       prossimo: futuri.length ? new Date(Math.min(...futuri)) : null,
       ultimo: passati.length ? new Date(Math.max(...passati)) : null };
   });
@@ -489,17 +513,52 @@ function renderClienti() {
   $("cl-conteggio").textContent = q ? `${lista.length} su ${clienti.length} clienti` : `${clienti.length} clienti`;
   if (!lista.length) { $("lista-clienti").innerHTML = `<div class="msg">${clienti.length ? "Nessun cliente trovato." : "Nessun cliente ancora."}</div>`; return; }
   $("lista-clienti").innerHTML = lista.map(c => `
-    <div class="cl-riga">
-      <div class="d">
-        <div class="nome">${esc(c.nome)}</div>
-        <div class="info"><a href="tel:${esc(soloCifre(c.telefono))}">${esc(c.telefono)}</a>${c.indirizzo ? " · " + esc(c.indirizzo) : ""}</div>
-        <div class="info">${c.n ? `${c.n} appuntament${c.n === 1 ? "o" : "i"}` + (c.prossimo ? ` · prossimo ${dataBreve(c.prossimo)}` : "") + (c.ultimo ? ` · ultimo ${dataBreve(c.ultimo)} ${c.ultimo.getFullYear()}` : "") : "Nessun appuntamento"}</div>
+    <div class="cl-voce">
+      <div class="cl-riga">
+        <div class="d">
+          <div class="nome">${esc(c.nome)}</div>
+          <div class="info"><a href="tel:${esc(soloCifre(c.telefono))}">${esc(c.telefono)}</a>${c.indirizzo ? " · " + esc(c.indirizzo) : ""}</div>
+          <div class="info">${c.n ? `${c.n} appuntament${c.n === 1 ? "o" : "i"}` + (c.prossimo ? ` · prossimo ${dataBreve(c.prossimo)}` : "") + (c.ultimo ? ` · ultimo ${dataBreve(c.ultimo)} ${c.ultimo.getFullYear()}` : "") : "Nessun appuntamento"}</div>
+        </div>
+        <button class="btn-storico${clienteAperto === c.id ? " aperto" : ""}" onclick="apriStorico('${c.id}')">Storico</button>
+        <button title="Modifica" onclick="modificaCliente('${c.id}')">✏️</button>
+        <button title="Elimina" onclick="eliminaCliente('${c.id}')">🗑️</button>
       </div>
-      <button title="Modifica" onclick="modificaCliente('${c.id}')">✏️</button>
-      <button title="Elimina" onclick="eliminaCliente('${c.id}')">🗑️</button>
+      <div class="cl-storico" id="storico-${c.id}" style="display:none"></div>
     </div>`).join("");
+  if (clienteAperto && lista.some(c => c.id === clienteAperto)) mostraStorico(clienteAperto);
 }
 $("cl-cerca").addEventListener("input", renderClienti);
+
+window.apriStorico = function(id) {
+  clienteAperto = clienteAperto === id ? null : id;
+  renderClienti();
+};
+async function mostraStorico(id) {
+  const box = $(`storico-${id}`); if (!box) return;
+  box.style.display = "block";
+  box.innerHTML = `<div class="msg">Caricamento...</div>`;
+  const { data, error } = await sb.from("prenotazioni").select("id, gruppo_id, inizio, stato, operatore_id, servizi(nome, prezzo)").eq("cliente_id", id).order("inizio", { ascending: false });
+  if (clienteAperto !== id) return; // nel frattempo è stato aperto un altro cliente
+  if (error) { box.innerHTML = `<div class="msg">Errore nel caricamento dello storico.</div>`; return; }
+  const ora = new Date(), app = raggruppa(data);
+  if (!app.length) { box.innerHTML = `<div class="msg">Nessun appuntamento registrato.</div>`; return; }
+  const futuri = app.filter(a => !a.annullato && a.inizio >= ora).sort((a, b) => a.inizio - b.inizio);
+  const passati = app.filter(a => !futuri.includes(a)).sort((a, b) => b.inizio - a.inizio);
+  const svolti = passati.filter(a => !a.annullato), annullati = app.filter(a => a.annullato).length;
+  const speso = svolti.reduce((t, a) => t + a.prezzo, 0);
+  const quando = d => d.toLocaleDateString("it-IT", { weekday:"short", day:"numeric", month:"short", year:"numeric" }) + " · " + ora2(d);
+  const voce = a => `
+    <div class="st-app${a.annullato ? " annullata" : ""}">
+      <div class="q">${quando(a.inizio)}${a.annullato ? " · annullato" : ""}</div>
+      <div class="t">${esc(a.servizi.join(" + ") || "Trattamento eliminato")}<span class="tag-op">${esc(nomeOp(a.operatore_id))}</span>${a.prezzo ? `<span class="pz">€ ${a.prezzo.toFixed(2).replace(/\.00$/, "")}</span>` : ""}</div>
+    </div>`;
+  box.innerHTML =
+    (futuri.length ? `<div class="st-titolo">In programma</div>${futuri.map(voce).join("")}` : "") +
+    (passati.length ? `<div class="st-titolo">Storico</div>${passati.map(voce).join("")}` : "") +
+    `<div class="st-tot">${svolti.length} svolt${svolti.length === 1 ? "o" : "i"} · ${annullati} annullat${annullati === 1 ? "o" : "i"} · speso stimato € ${speso.toFixed(0)}</div>`;
+}
+const ora2 = d => d.toLocaleTimeString("it-IT", { hour:"2-digit", minute:"2-digit" });
 
 window.modificaCliente = function(id) {
   const c = clienti.find(x => x.id === id); if (!c) return;
