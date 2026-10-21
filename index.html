@@ -155,6 +155,14 @@
   .op-btn.selezionato { background: var(--accento); color:white; border-color: var(--accento); }
   .privacy { font-size:0.75rem; color:#888; margin-top:10px; line-height:1.4; }
   #brand-nome { margin:0; font-size:1.6rem; color:var(--blu); }
+  .avviso-primo { background:#fbeef0; border:1px solid #f0c9cf; border-left:4px solid var(--accento); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  .avviso-primo h2 { font-size:1rem; margin:0 0 6px; color:var(--blu); }
+  .avviso-primo p { margin:0 0 12px; font-size:.92rem; line-height:1.45; color:#3a3a3a; }
+  .avviso-primo .chiama { display:flex; gap:8px; flex-wrap:wrap; }
+  .avviso-primo .chiama a { flex:1; min-width:140px; text-align:center; padding:10px 12px; border-radius:8px; background:white; border:1px solid var(--accento); color:var(--accento); font-weight:600; font-size:.92rem; text-decoration:none; }
+  .avviso-primo .chiama a:hover { background:var(--accento); color:white; }
+  .avviso-primo .chiama a { white-space:nowrap; }
+  .avviso-primo .chiama small { display:block; font-weight:400; font-size:.75rem; opacity:.8; margin-bottom:2px; }
 </style>
 </head>
 <body>
@@ -166,6 +174,15 @@
 </header>
 
 <main id="app">
+
+  <div class="avviso-primo" id="avviso-primo">
+    <h2>È la prima volta da noi?</h2>
+    <p>Prima di prenotare online ti invitiamo a telefonarci: insieme valuteremo le tue esigenze e il trattamento più adatto a te.</p>
+    <div class="chiama">
+      <a href="tel:0803381245"><small>Telefono</small>080 3381245</a>
+      <a href="tel:3400502289"><small>Cellulare</small>340 0502289</a>
+    </div>
+  </div>
 
   <div class="step" id="step-operatore">
     <h2>1. Con chi vuoi prenotare?</h2>
@@ -434,6 +451,7 @@ $("btn-conferma").addEventListener("click", async () => {
     return;
   }
   document.querySelectorAll(".step").forEach(el => el.style.display = "none");
+  $("avviso-primo").style.display = "none";
   $("step-ok").style.display = "block";
   $("riepilogo").textContent = `${serviziScelti.map(s => s.nome).join(", ")} con ${operatoreScelto.nome}, ${formattaData(slotScelto.inizio)} alle ${formattaOra(slotScelto.inizio)}.`;
 });
