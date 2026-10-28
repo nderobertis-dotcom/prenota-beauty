@@ -221,6 +221,7 @@ const ora = iso => new Date(iso).toLocaleTimeString("it-IT", { hour:"2-digit", m
 const dataBreve = d => d.toLocaleDateString("it-IT", { day:"numeric", month:"short" });
 const GIORNI = [[1,"Lunedì"],[2,"Martedì"],[3,"Mercoledì"],[4,"Giovedì"],[5,"Venerdì"],[6,"Sabato"],[0,"Domenica"]];
 
+let isSuper = true;
 let operatori = [], servizi = [], orari = [], festivita = [], prenotazioniVista = [];
 let filtroOp = "tutti", vista = "giorno", inModifica = null, periodoStats = "tutto";
 
@@ -260,11 +261,21 @@ async function caricaAnagrafiche() {
     return;
   }
   operatori = o.data; servizi = s.data; orari = h.data; festivita = f.data;
+  // Ambito dell'utente: null = admin completo; altrimenti solo gli operatori indicati (la protezione vera è nel database, qui si nasconde solo ciò che non serve)
+  const { data: ambito, error: eAmb } = await sb.rpc("mio_ambito");
+  if (!eAmb && Array.isArray(ambito)) {
+    isSuper = false;
+    operatori = operatori.filter(x => ambito.includes(x.id));
+    servizi = servizi.filter(x => ambito.includes(x.operatore_id));
+    orari = orari.filter(x => ambito.includes(x.operatore_id));
+    ["btn-rinomina-op", "btn-toggle-op", "or-nome", "nuovo-op-nome", "btn-add-op"].forEach(id => { const e = $(id); if (e) e.style.display = "none"; });
+    if (operatori.length === 1) filtroOp = operatori[0].id;
+  }
   renderChip(); popolaSelectOperatori(); renderServiziAdmin(); renderOrari();
 }
 
 function opzioniOperatori(conCentro) {
-  return (conCentro ? `<option value="">Tutto il centro</option>` : "") +
+  return (conCentro && isSuper ? `<option value="">Tutto il centro</option>` : "") +
     operatori.map(o => `<option value="${o.id}">${esc(o.nome)}${o.attivo ? "" : " (disattivo)"}</option>`).join("");
 }
 function popolaSelectOperatori() {
@@ -522,7 +533,7 @@ function renderClienti() {
         </div>
         <button class="btn-storico${clienteAperto === c.id ? " aperto" : ""}" onclick="apriStorico('${c.id}')">Storico</button>
         <button title="Modifica" onclick="modificaCliente('${c.id}')">✏️</button>
-        <button title="Elimina" onclick="eliminaCliente('${c.id}')">🗑️</button>
+        ${isSuper ? `<button title="Elimina" onclick="eliminaCliente('${c.id}')">🗑️</button>` : ""}
       </div>
       <div class="cl-storico" id="storico-${c.id}" style="display:none"></div>
     </div>`).join("");
@@ -759,7 +770,7 @@ async function caricaBlocchi() {
     let et;
     if (tuttoGiorno) { const ultimo = new Date(f); ultimo.setDate(ultimo.getDate() - 1); et = isoLocale(i) === isoLocale(ultimo) ? `${dataBreve(i)} · Tutto il giorno` : `dal ${dataBreve(i)} al ${dataBreve(ultimo)}`; }
     else et = `${dataBreve(i)} · ${ora(b.inizio)}–${ora(b.fine)}`;
-    return `<div class="blocco-riga"><div class="i"><b>${et}</b> <span class="tag-op">${b.operatore_id ? esc(nomeOp(b.operatore_id)) : "Tutto il centro"}</span>${b.motivo ? `<div style="color:#777;font-size:.78rem">${esc(b.motivo)}</div>` : ""}</div><button title="Rimuovi" onclick="eliminaBlocco('${b.id}')">🗑️</button></div>`;
+    return `<div class="blocco-riga"><div class="i"><b>${et}</b> <span class="tag-op">${b.operatore_id ? esc(nomeOp(b.operatore_id)) : "Tutto il centro"}</span>${b.motivo ? `<div style="color:#777;font-size:.78rem">${esc(b.motivo)}</div>` : ""}</div>${(b.operatore_id || isSuper) ? `<button title="Rimuovi" onclick="eliminaBlocco('${b.id}')">🗑️</button>` : ""}</div>`;
   }).join("");
 }
 window.eliminaBlocco = async function(id) {
